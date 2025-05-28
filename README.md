@@ -1,1 +1,1 @@
-# HandTrack_Studio-Real-Time_Gesture_Recognition_Playground
+# HandTrack_Studio-Real_Time_Gesture_Recognition_Playground
