@@ -20,7 +20,7 @@ interface HandLandmark {
 
 interface DetectedHand {
   landmarks: HandLandmark[];
-  handedness: string;
+  handedness: "Left" | "Right";
 }
 
 const HandTracker = ({ onInitialized }: HandTrackerProps) => {
@@ -161,7 +161,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
               y: point[1],
               z: point[2],
             })),
-            handedness: prediction.handInViewConfidence > 0.8 ? "Right" : "Left",
+            handedness: prediction.handInViewConfidence > 0.8 ? "Right" as const : "Left" as const,
           }))
 
           setHands(detectedHands)
