@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect, useState, useCallback } from "react"
 import * as tf from "@tensorflow/tfjs"
 import * as handpose from "@tensorflow-models/handpose"
 import { toast } from "sonner"
@@ -101,9 +101,48 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
     }
   }
 
+  // Draw connections between landmarks
+  const drawConnections = useCallback((ctx: CanvasRenderingContext2D, landmarks: HandLandmark[]) => {
+    const connections = [
+      [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+      [0, 9], [9, 10], [10, 11], [11, 12], [0, 13], [13, 14], [14, 15],
+      [15, 16], [0, 17], [17, 18], [18, 19], [19, 20], [0, 5], [5, 9],
+      [9, 13], [13, 17]
+    ]
+
+    ctx.lineWidth = 2
+    ctx.strokeStyle = "#94a3b8"
+
+    connections.forEach(([start, end]) => {
+      ctx.beginPath()
+      ctx.moveTo(landmarks[start].x, landmarks[start].y)
+      ctx.lineTo(landmarks[end].x, landmarks[end].y)
+      ctx.stroke()
+    })
+  }, [])
+
   // Detect hands and run gesture recognition
   useEffect(() => {
     let animationFrameId: number
+
+    // Draw hand landmarks on canvas
+    const drawHand = (hands: DetectedHand[], canvas: HTMLCanvasElement) => {
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return
+
+      hands.forEach(hand => {
+        const landmarks = hand.landmarks
+        drawConnections(ctx, landmarks)
+
+        landmarks.forEach((landmark: HandLandmark, index: number) => {
+          const isFingerTip = [4, 8, 12, 16, 20].includes(index)
+          ctx.beginPath()
+          ctx.arc(landmark.x, landmark.y, isFingerTip ? 6 : 4, 0, 2 * Math.PI)
+          ctx.fillStyle = isFingerTip ? "#06b6d4" : "#0ea5e9"
+          ctx.fill()
+        })
+      })
+    }
 
     const detectHands = async () => {
       if (!model || !videoRef.current || !canvasRef.current || !cameraActive) return
@@ -154,46 +193,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
         cancelAnimationFrame(animationFrameId)
       }
     }
-  }, [model, isVideoReady, cameraActive, setHands, setCurrentGesture, gestureRecognizer, drawHand, setDetectionConfidence])
-
-  // Draw hand landmarks on canvas
-  const drawHand = (hands: DetectedHand[], canvas: HTMLCanvasElement) => {
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    hands.forEach(hand => {
-      const landmarks = hand.landmarks
-      drawConnections(ctx, landmarks)
-
-      landmarks.forEach((landmark: HandLandmark, index: number) => {
-        const isFingerTip = [4, 8, 12, 16, 20].includes(index)
-        ctx.beginPath()
-        ctx.arc(landmark.x, landmark.y, isFingerTip ? 6 : 4, 0, 2 * Math.PI)
-        ctx.fillStyle = isFingerTip ? "#06b6d4" : "#0ea5e9"
-        ctx.fill()
-      })
-    })
-  }
-
-  // Draw connections between landmarks
-  const drawConnections = (ctx: CanvasRenderingContext2D, landmarks: HandLandmark[]) => {
-    const connections = [
-      [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
-      [0, 9], [9, 10], [10, 11], [11, 12], [0, 13], [13, 14], [14, 15],
-      [15, 16], [0, 17], [17, 18], [18, 19], [19, 20], [0, 5], [5, 9],
-      [9, 13], [13, 17]
-    ]
-
-    ctx.lineWidth = 2
-    ctx.strokeStyle = "#94a3b8"
-
-    connections.forEach(([start, end]) => {
-      ctx.beginPath()
-      ctx.moveTo(landmarks[start].x, landmarks[start].y)
-      ctx.lineTo(landmarks[end].x, landmarks[end].y)
-      ctx.stroke()
-    })
-  }
+  }, [model, isVideoReady, cameraActive, setHands, setCurrentGesture, gestureRecognizer, setDetectionConfidence, drawConnections])
 
   return (
     <div className="rounded-lg overflow-hidden bg-gray-800 border border-gray-700 relative">

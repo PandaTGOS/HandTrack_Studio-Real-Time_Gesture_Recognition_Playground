@@ -27,9 +27,7 @@ const GestureControls = () => {
   // Create gesture from UI controls
   const createGestureFromUI = () => {
     if (!gestureName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Name required",
+      toast.error("Name required", {
         description: "Please enter a name for your gesture",
       })
       return
@@ -40,8 +38,7 @@ const GestureControls = () => {
       fingerStates: { ...fingerStates },
     })
 
-    toast({
-      title: "Gesture created",
+    toast.success("Gesture created", {
       description: `"${gestureName}" has been added to your custom gestures`,
     })
 
@@ -59,18 +56,14 @@ const GestureControls = () => {
   // Capture gesture from live feed
   const captureGestureFromFeed = () => {
     if (!gestureName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Name required",
+      toast.error("Name required", {
         description: "Please enter a name for your gesture",
       })
       return
     }
 
     if (!isTracking || hands.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No hand detected",
+      toast.error("No hand detected", {
         description: "Please show your hand to the camera first",
       })
       return
@@ -81,8 +74,7 @@ const GestureControls = () => {
       landmarks: hands[0].landmarks,
     })
 
-    toast({
-      title: "Gesture captured",
+    toast.success("Gesture captured", {
       description: `"${gestureName}" has been captured from the live feed`,
     })
 
