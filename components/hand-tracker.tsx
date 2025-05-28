@@ -12,6 +12,17 @@ interface HandTrackerProps {
   onInitialized: () => void
 }
 
+interface HandLandmark {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface DetectedHand {
+  landmarks: HandLandmark[];
+  handedness: string;
+}
+
 const HandTracker = ({ onInitialized }: HandTrackerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -143,10 +154,10 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
         cancelAnimationFrame(animationFrameId)
       }
     }
-  }, [model, isVideoReady, cameraActive, setHands, setCurrentGesture, gestureRecognizer])
+  }, [model, isVideoReady, cameraActive, setHands, setCurrentGesture, gestureRecognizer, drawHand, setDetectionConfidence])
 
   // Draw hand landmarks on canvas
-  const drawHand = (hands: any[], canvas: HTMLCanvasElement) => {
+  const drawHand = (hands: DetectedHand[], canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
@@ -154,7 +165,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
       const landmarks = hand.landmarks
       drawConnections(ctx, landmarks)
 
-      landmarks.forEach((landmark: any, index: number) => {
+      landmarks.forEach((landmark: HandLandmark, index: number) => {
         const isFingerTip = [4, 8, 12, 16, 20].includes(index)
         ctx.beginPath()
         ctx.arc(landmark.x, landmark.y, isFingerTip ? 6 : 4, 0, 2 * Math.PI)
@@ -165,7 +176,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
   }
 
   // Draw connections between landmarks
-  const drawConnections = (ctx: CanvasRenderingContext2D, landmarks: any[]) => {
+  const drawConnections = (ctx: CanvasRenderingContext2D, landmarks: HandLandmark[]) => {
     const connections = [
       [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
       [0, 9], [9, 10], [10, 11], [11, 12], [0, 13], [13, 14], [14, 15],
