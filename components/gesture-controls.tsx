@@ -20,7 +20,6 @@ const GestureControls = () => {
     removeCustomGesture,
     isTracking,
     builtInGestures,
-    toggleBuiltInGesture,
     setCustomGestures,
   } = useHandTracking()
 
