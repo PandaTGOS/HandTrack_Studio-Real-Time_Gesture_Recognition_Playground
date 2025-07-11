@@ -26,7 +26,7 @@ export interface CustomGesture {
     ring: boolean
     pinky: boolean
   }
-  landmarks?: Landmark[]
+  samples?: Landmark[][]
   createdAt: Date
 }
 

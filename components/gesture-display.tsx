@@ -5,9 +5,14 @@ import { Activity } from "lucide-react"
 import { useHandTracking } from "../contexts/hand-tracking-context"
 
 const GestureDisplay = () => {
-  const { currentGesture, isTracking, detectionConfidence, hands, customGestures } = useHandTracking()
+  const {
+    currentGesture,
+    isTracking,
+    detectionConfidence,
+    hands,
+    customGestures,
+  } = useHandTracking()
 
-  // Map gesture names to display names
   const gestureNames: Record<string, string> = {
     none: "No Gesture Detected",
     open_hand: "Open Hand",
@@ -17,11 +22,14 @@ const GestureDisplay = () => {
     thumbs_up: "Thumbs Up",
   }
 
-  // Check if current gesture is custom
-  const isCustomGesture = customGestures.some((g) => g.name === currentGesture)
-  const displayName = gestureNames[currentGesture] || currentGesture
+  const isCustomGesture = customGestures.some(
+    (g) => g.name.toLowerCase() === currentGesture?.toLowerCase()
+  )
 
-  // Get confidence percentage
+  const displayName =
+    gestureNames[currentGesture] ||
+    (isCustomGesture ? currentGesture : currentGesture || "Unknown Gesture")
+
   const confidencePercentage = Math.round(detectionConfidence * 100)
 
   return (
@@ -29,11 +37,13 @@ const GestureDisplay = () => {
       <CardContent className="p-4 h-full flex flex-col justify-center">
         {isTracking ? (
           <div className="space-y-3">
-            {/* Header with confidence */}
+            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="w-5 h-5 text-blue-400" />
-                <span className="text-sm font-medium text-blue-400">Live Detection</span>
+                <span className="text-sm font-medium text-blue-400">
+                  Live Detection
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">Confidence:</span>
@@ -42,8 +52,8 @@ const GestureDisplay = () => {
                     confidencePercentage > 80
                       ? "text-green-400"
                       : confidencePercentage > 50
-                        ? "text-yellow-400"
-                        : "text-red-400"
+                      ? "text-yellow-400"
+                      : "text-red-400"
                   }`}
                 >
                   {hands.length > 0 ? `${confidencePercentage}%` : "No hand"}
@@ -52,13 +62,15 @@ const GestureDisplay = () => {
             </div>
 
             {/* Progress bar */}
-            <Progress value={hands.length > 0 ? confidencePercentage : 0} className="h-2 bg-gray-700" />
+            <Progress
+              value={hands.length > 0 ? confidencePercentage : 0}
+              className="h-2 bg-gray-700"
+            />
 
-            {/* Current gesture display */}
+            {/* Gesture name */}
             <div className="flex items-center justify-between">
               <div
-                className={`
-                  flex-1 text-lg font-bold py-2 px-4 rounded-lg text-center transition-all duration-300
+                className={`flex-1 text-lg font-bold py-2 px-4 rounded-lg text-center transition-all duration-300
                   ${
                     currentGesture !== "none"
                       ? isCustomGesture
@@ -73,7 +85,10 @@ const GestureDisplay = () => {
               </div>
               {isCustomGesture && (
                 <div className="ml-3">
-                  <Badge variant="outline" className="border-purple-500 text-purple-400">
+                  <Badge
+                    variant="outline"
+                    className="border-purple-500 text-purple-400"
+                  >
                     Custom
                   </Badge>
                 </div>

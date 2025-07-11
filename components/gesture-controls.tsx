@@ -13,9 +13,19 @@ import { useHandTracking } from "../contexts/hand-tracking-context"
 import { toast } from "sonner"
 
 const GestureControls = () => {
-  const { hands, customGestures, addCustomGesture, removeCustomGesture, isTracking, builtInGestures, toggleBuiltInGesture } = useHandTracking()
+  const {
+    hands,
+    customGestures,
+    addCustomGesture,
+    removeCustomGesture,
+    isTracking,
+    builtInGestures,
+    toggleBuiltInGesture,
+    setCustomGestures,
+  } = useHandTracking()
 
   const [gestureName, setGestureName] = useState("")
+
   const [fingerStates, setFingerStates] = useState({
     thumb: false,
     index: false,
@@ -24,7 +34,6 @@ const GestureControls = () => {
     pinky: false,
   })
 
-  // Create gesture from UI controls
   const createGestureFromUI = () => {
     if (!gestureName.trim()) {
       toast.error("Name required", {
@@ -36,25 +45,18 @@ const GestureControls = () => {
     addCustomGesture({
       name: gestureName,
       fingerStates: { ...fingerStates },
+      samples: [],
     })
 
-    toast.success("Gesture created", {
-      description: `"${gestureName}" has been added to your custom gestures`,
+    toast.success("Gesture created (manual)", {
+      description: `"${gestureName}" added with finger states`,
     })
 
-    // Reset form
     setGestureName("")
-    setFingerStates({
-      thumb: false,
-      index: false,
-      middle: false,
-      ring: false,
-      pinky: false,
-    })
+    setFingerStates({ thumb: false, index: false, middle: false, ring: false, pinky: false })
   }
 
-  // Capture gesture from live feed
-  const captureGestureFromFeed = () => {
+  const captureSample = () => {
     if (!gestureName.trim()) {
       toast.error("Name required", {
         description: "Please enter a name for your gesture",
@@ -64,28 +66,37 @@ const GestureControls = () => {
 
     if (!isTracking || hands.length === 0) {
       toast.error("No hand detected", {
-        description: "Please show your hand to the camera first",
+        description: "Please show your hand to the camera",
       })
       return
     }
 
-    addCustomGesture({
-      name: gestureName,
-      landmarks: hands[0].landmarks,
-    })
+    const existing = customGestures.find(g => g.name === gestureName)
 
-    toast.success("Gesture captured", {
-      description: `"${gestureName}" has been captured from the live feed`,
-    })
+    if (existing) {
+      existing.samples = [...(existing.samples || []), hands[0].landmarks]
+      setCustomGestures([
+        ...customGestures.filter(g => g.name !== gestureName),
+        existing,
+      ])
+      toast.success("Sample added", {
+        description: `"${gestureName}" now has ${existing.samples.length} samples`,
+      })
+    } else {
+      addCustomGesture({
+        name: gestureName,
+        samples: [hands[0].landmarks],
+      })
+      toast.success("Gesture created with 1 sample", {
+        description: `"${gestureName}" has been added`,
+      })
+    }
 
     setGestureName("")
   }
 
   const toggleFinger = (finger: keyof typeof fingerStates) => {
-    setFingerStates((prev) => ({
-      ...prev,
-      [finger]: !prev[finger],
-    }))
+    setFingerStates(prev => ({ ...prev, [finger]: !prev[finger] }))
   }
 
   const fingerNames = {
@@ -107,172 +118,110 @@ const GestureControls = () => {
           </Badge>
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-4 h-[calc(100%-80px)] overflow-y-auto">
-        <Tabs defaultValue="create" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-gray-700">
+        <Tabs defaultValue="train" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-700">
             <TabsTrigger value="create" className="data-[state=active]:bg-gray-600">
-              <Plus className="w-4 h-4 mr-1" />
-              Create
+              Manual
             </TabsTrigger>
-            <TabsTrigger value="manage" className="data-[state=active]:bg-gray-600">
-              <Hand className="w-4 h-4 mr-1" />
-              Manage
+            <TabsTrigger value="capture" className="data-[state=active]:bg-gray-600">
+              Capture
+            </TabsTrigger>
+            <TabsTrigger value="train" className="data-[state=active]:bg-gray-600">
+              Train
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="create" className="space-y-4 mt-4">
+          {/* Manual Finger UI */}
+          <TabsContent value="create" className="mt-4 space-y-3">
+            <Label htmlFor="gesture-name">Gesture Name</Label>
+            <Input
+              id="gesture-name"
+              value={gestureName}
+              onChange={(e) => setGestureName(e.target.value)}
+              placeholder="Enter gesture name..."
+              className="bg-gray-700 border-gray-600"
+            />
             <div className="space-y-2">
-              <Label htmlFor="gesture-name" className="text-sm font-medium">
-                Gesture Name
-              </Label>
-              <Input
-                id="gesture-name"
-                value={gestureName}
-                onChange={(e) => setGestureName(e.target.value)}
-                placeholder="Enter gesture name..."
-                className="bg-gray-700 border-gray-600"
-              />
+              {Object.entries(fingerNames).map(([key, name]) => (
+                <div key={key} className="flex justify-between items-center p-2 bg-gray-700 rounded-lg">
+                  <span className="text-sm text-white">{name}</span>
+                  <Switch
+                    checked={fingerStates[key as keyof typeof fingerStates]}
+                    onCheckedChange={() => toggleFinger(key as keyof typeof fingerStates)}
+                  />
+                </div>
+              ))}
             </div>
-
-            <Tabs defaultValue="ui-controls" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-700">
-                <TabsTrigger value="ui-controls" className="data-[state=active]:bg-gray-600 text-xs">
-                  <Hand className="w-3 h-3 mr-1" />
-                  Manual
-                </TabsTrigger>
-                <TabsTrigger value="capture" className="data-[state=active]:bg-gray-600 text-xs">
-                  <Camera className="w-3 h-3 mr-1" />
-                  Capture
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="ui-controls" className="space-y-3 mt-3">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-gray-300">Finger Positions</Label>
-                  <div className="space-y-2">
-                    {Object.entries(fingerNames).map(([key, name]) => (
-                      <div key={key} className="flex items-center justify-between p-2 bg-gray-700 rounded-lg">
-                        <span className="text-sm text-white">{name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-300">
-                            {fingerStates[key as keyof typeof fingerStates] ? "Extended" : "Curled"}
-                          </span>
-                          <Switch
-                            checked={fingerStates[key as keyof typeof fingerStates]}
-                            onCheckedChange={() => toggleFinger(key as keyof typeof fingerStates)}
-                            className="data-[state=checked]:bg-white data-[state=unchecked]:bg-gray-500"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Button
-                  onClick={createGestureFromUI}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={!gestureName.trim()}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Gesture
-                </Button>
-              </TabsContent>
-
-              <TabsContent value="capture" className="space-y-3 mt-3">
-                <div className="p-3 bg-gray-700 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div
-                      className={`w-2 h-2 rounded-full ${isTracking && hands.length > 0 ? "bg-green-500 animate-pulse" : "bg-red-500"}`}
-                    ></div>
-                    <span className="text-sm">
-                      {isTracking && hands.length > 0 ? "Ready to capture" : "No hand detected"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400">Position your hand and click capture</p>
-                </div>
-
-                <Button
-                  onClick={captureGestureFromFeed}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={!gestureName.trim() || !isTracking || hands.length === 0}
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Capture Gesture
-                </Button>
-              </TabsContent>
-            </Tabs>
+            <Button onClick={createGestureFromUI} className="w-full bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Manual Gesture
+            </Button>
           </TabsContent>
 
-          <TabsContent value="manage" className="space-y-3 mt-4">
-            <div className="space-y-4">
-              {/* Built-in gestures */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-300 mb-2">Built-in Gestures</h3>
-                <div className="space-y-2">
-                  {builtInGestures.map((gesture) => (
-                    <div key={gesture.id} className="flex items-center justify-between p-2 bg-gray-700 rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm text-white">{gesture.displayName}</span>
-                          <Badge variant="secondary" className="text-xs">Built-in</Badge>
-                          {!gesture.isEnabled && (
-                            <Badge variant="destructive" className="text-xs">Disabled</Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={gesture.isEnabled}
-                          onCheckedChange={() => toggleBuiltInGesture(gesture.id)}
-                          className="data-[state=checked]:bg-white data-[state=unchecked]:bg-gray-500"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {/* Live Sample Capture */}
+          <TabsContent value="capture" className="mt-4 space-y-3">
+            <Label htmlFor="gesture-name">Gesture Name</Label>
+            <Input
+              id="gesture-name"
+              value={gestureName}
+              onChange={(e) => setGestureName(e.target.value)}
+              placeholder="Enter gesture name..."
+              className="bg-gray-700 border-gray-600"
+            />
+            <div className="p-3 bg-gray-700 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isTracking && hands.length > 0 ? "bg-green-500 animate-pulse" : "bg-red-500"
+                  }`}
+                ></div>
+                <span className="text-sm">
+                  {isTracking && hands.length > 0 ? "Ready to record sample" : "No hand detected"}
+                </span>
               </div>
-
-              {/* Custom gestures */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-300 mb-2">Custom Gestures</h3>
-                {customGestures.length === 0 ? (
-                  <div className="text-center py-6 text-gray-400">
-                    <Hand className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No custom gestures yet</p>
-                    <p className="text-xs text-gray-500">Create your first gesture</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {customGestures.map((gesture) => (
-                      <div key={gesture.id} className="flex items-center justify-between p-2 bg-gray-700 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-white">{gesture.name}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              {gesture.landmarks ? "Captured" : "Manual"}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-gray-400">
-                            Created: {gesture.createdAt.toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            removeCustomGesture(gesture.id)
-                            toast.success(`"${gesture.name}" gesture removed`)
-                          }}
-                          className="ml-2 h-8 w-8 p-0"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <p className="text-xs text-gray-400">Show gesture and record sample</p>
             </div>
+            <Button
+              onClick={captureSample}
+              className="w-full bg-green-600 hover:bg-green-700"
+              disabled={!gestureName.trim() || !isTracking || hands.length === 0}
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              Record Gesture Sample
+            </Button>
+          </TabsContent>
+
+          {/* Training View */}
+          <TabsContent value="train" className="mt-4 space-y-3">
+            {customGestures.length === 0 ? (
+              <div className="text-center text-gray-400">No custom gestures yet</div>
+            ) : (
+              customGestures.map((gesture) => (
+                <div
+                  key={gesture.id}
+                  className="p-3 bg-gray-700 rounded-lg flex justify-between items-center"
+                >
+                  <div>
+                    <div className="text-white font-medium">{gesture.name}</div>
+                    <div className="text-xs text-gray-400">
+                      Samples: {gesture.samples?.length || 0}
+                    </div>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      removeCustomGesture(gesture.id)
+                      toast.success(`"${gesture.name}" removed`)
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
@@ -281,4 +230,3 @@ const GestureControls = () => {
 }
 
 export default GestureControls
-
