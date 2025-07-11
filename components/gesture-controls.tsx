@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Camera, Hand, Settings, Plus } from "lucide-react"
+import { Trash2, Camera, Settings, Plus } from "lucide-react"
 import { useHandTracking } from "../contexts/hand-tracking-context"
 import { toast } from "sonner"
 
