@@ -50,7 +50,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
   useEffect(() => {
     gestureRecognizer.setCustomGestures(customGestures)
     gestureRecognizer.setBuiltInGestures(builtInGestures)
-  }, [customGestures, builtInGestures])
+  }, [gestureRecognizer, customGestures, builtInGestures])
 
   const drawHands = useCallback((ctx: CanvasRenderingContext2D, landmarksList: Landmark[][]) => {
     ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
@@ -189,12 +189,16 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
 
         {!cameraActive && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50">
-            <Button
-              onClick={startCamera}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg text-lg"
-            >
-              Start Camera
-            </Button>
+            {!isVideoReady ? (
+              <span className="text-gray-300 text-lg animate-pulse">Loading video...</span>
+            ) : (
+              <Button
+                onClick={startCamera}
+                className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg text-lg"
+              >
+                Start Camera
+              </Button>
+            )}
           </div>
         )}
       </div>
