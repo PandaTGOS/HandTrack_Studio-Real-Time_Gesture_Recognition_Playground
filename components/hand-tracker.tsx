@@ -8,13 +8,24 @@ import GestureRecognizer from "../utils/gesture-recognizer"
 
 declare global {
   interface Window {
-    Hands: any
-    Camera: any
+    Hands: typeof import("@mediapipe/hands").Hands
+    Camera: typeof import("@mediapipe/camera_utils").Camera
   }
 }
 
 interface HandTrackerProps {
   onInitialized: () => void
+}
+
+interface Landmark {
+  x: number
+  y: number
+  z: number
+}
+
+interface DetectionResult {
+  landmarks: Landmark[]
+  handedness: "Left" | "Right"
 }
 
 const HandTracker = ({ onInitialized }: HandTrackerProps) => {
@@ -23,17 +34,25 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
   const [cameraActive, setCameraActive] = useState(false)
   const [isVideoReady, setIsVideoReady] = useState(false)
 
-  const { setHands, setIsTracking, setCurrentGesture, setDetectionConfidence, customGestures, builtInGestures } = useHandTracking()
+  const {
+    setHands,
+    setIsTracking,
+    setCurrentGesture,
+    setDetectionConfidence,
+    customGestures,
+    builtInGestures
+  } = useHandTracking()
+
   const gestureRecognizer = useRef(new GestureRecognizer()).current
-  const cameraRef = useRef<any>(null)
-  const handsRef = useRef<any>(null)
+  const cameraRef = useRef<InstanceType<typeof window.Camera> | null>(null)
+  const handsRef = useRef<InstanceType<typeof window.Hands> | null>(null)
 
   useEffect(() => {
     gestureRecognizer.setCustomGestures(customGestures)
     gestureRecognizer.setBuiltInGestures(builtInGestures)
   }, [customGestures, builtInGestures])
 
-  const drawHands = useCallback((ctx: CanvasRenderingContext2D, landmarksList: any[]) => {
+  const drawHands = useCallback((ctx: CanvasRenderingContext2D, landmarksList: Landmark[][]) => {
     ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
 
     const connections = [
@@ -57,7 +76,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
         ctx.stroke()
       })
 
-      landmarks.forEach((point: any, index: number) => {
+      landmarks.forEach((point: Landmark, index: number) => {
         const x = point.x * canvasRef.current!.width
         const y = point.y * canvasRef.current!.height
         ctx.beginPath()
@@ -80,8 +99,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
     if (
       typeof window === "undefined" ||
       typeof navigator === "undefined" ||
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices.getUserMedia
+      !navigator.mediaDevices?.getUserMedia
     ) {
       toast.error("Camera not supported in this browser")
       return
@@ -103,12 +121,12 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
       minTrackingConfidence: 0.7,
     })
 
-    hands.onResults((results: any) => {
+    hands.onResults((results) => {
       const ctx = canvasRef.current?.getContext("2d")
       if (!ctx || !results.multiHandLandmarks) return
 
-      const detected = results.multiHandLandmarks.map((landmarks: any, idx: number) => ({
-        landmarks: landmarks.map((l: any) => ({ x: l.x, y: l.y, z: l.z })),
+      const detected: DetectionResult[] = results.multiHandLandmarks.map((landmarks, idx) => ({
+        landmarks: landmarks.map((l) => ({ x: l.x, y: l.y, z: l.z })),
         handedness: results.multiHandedness?.[idx]?.label === "Left" ? "Left" : "Right",
       }))
 
@@ -128,7 +146,7 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
 
     const camera = new window.Camera(videoRef.current, {
       onFrame: async () => {
-        await hands.send({ image: videoRef.current })
+        await hands.send({ image: videoRef.current! })
       },
       width: 640,
       height: 480,
@@ -141,7 +159,6 @@ const HandTracker = ({ onInitialized }: HandTrackerProps) => {
     onInitialized()
     toast.success("MediaPipe Hands initialized")
   }
-
 
   const stopCamera = () => {
     cameraRef.current?.stop()
